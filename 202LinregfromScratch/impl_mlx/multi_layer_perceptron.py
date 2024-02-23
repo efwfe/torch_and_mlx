@@ -3,9 +3,12 @@
 import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
-
+import mnist
 import numpy as np
 
+#%%
+import os
+print(os.getcwd())
 #%%
 
 class MLP(nn.Module):
@@ -25,7 +28,7 @@ class MLP(nn.Module):
 
     
     def __call__(self, x):
-        for l in self.layers:
+        for l in self.layers[:-1]:
             x = mx.maximum(l(x), 0.)
         return self.layers[-1](x)
     
@@ -35,7 +38,7 @@ def loss_fn(model, X, y):
 
 
 def eval_fn(model, X, y):
-    return mx.mean(mx.argmax(model(X), y))
+    return mx.mean(mx.argmax(model(X), axis=1) == y)
 
 
 #%%
@@ -47,8 +50,8 @@ num_epochs = 10
 learning_rate = 1e-1
 
 # load data
-import mnist
-train_images, train_labels, test_images, test_labels = map(mx.array, minist.minist())
+
+train_images, train_labels, test_images, test_labels = map(mx.array, mnist.mnist())
 
 #%%
 def batch_iterate(batch_size, X, y):
@@ -73,6 +76,7 @@ for e in range(num_epochs):
 
         optimizer.update(model, grads)
 
-        mx.eval(model.paramters(), optimizer.state)
+        mx.eval(model.parameters(), optimizer.state)
     accuracy = eval_fn(model, test_images, test_labels)
     print(f"Epoch {e}: Test accuracy {accuracy.item():.3f}")
+# %%
