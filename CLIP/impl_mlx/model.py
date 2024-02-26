@@ -143,7 +143,11 @@ class CLIPVisionModel(nn.Module):
         self.position_embedding = mx.zeros((num_positions, config.hidden_size))
         self.pre_layernorm = nn.LayerNorm(config.hidden_size)
         self.layers = [
-            CLIPEncoderLayer(config.hidden_size, config.intermediate_size, config.num_attention_heads)
+            CLIPEncoderLayer(
+                config.hidden_size,
+                config.intermediate_size, 
+                config.num_attention_heads
+            )
             for _ in range(config.num_attention_heads)
         ]
         self.post_layernorm = nn.LayerNorm(config.hidden_size)
@@ -240,7 +244,7 @@ class CLIPModel(nn.Module):
         )
     
     @staticmethod
-    def from_pretraubed(path: str):
+    def from_pretrained(path: str):
         path = Path(path)
         
         with open(path / "config.json", 'r') as fid:
