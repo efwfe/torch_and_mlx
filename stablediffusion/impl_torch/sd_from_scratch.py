@@ -690,4 +690,3 @@ from torch.utils.data import TensorDataset
 latent_dataset = TensorDataset(zdata, ydata)
 
 # %%
-class La
