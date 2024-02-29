@@ -214,7 +214,7 @@ class Unet(nn.Module):
         # Incorporate information from t
         # Group normalization
         h1 = self.act(self.gnorm1(h1))
-        h2 = self.conv2(h1) + self.dense3(embed)
+        h2 = self.conv2(h1) + self.dense2(embed)
         h2 = self.act(self.gnorm2(h2))
         
         h3 = self.act(self.gnorm2(h2))
@@ -620,3 +620,74 @@ class AutoEncoder(nn.Module):
 
 # %%
 # Train the autoencoder with the help of perceptual loss
+
+x_tmp = torch.randn(1, 1, 28, 28)
+assert AutoEncoder()(x_tmp).shape == x_tmp.shape
+
+# %% train the autoencoder with preceptual loss
+
+from lpips import LPIPS
+
+# %%
+lpips = LPIPS(net='squeeze').cuda()
+loss_fn_ae = lambda x, xhat: nn.functional.mse_loss(x, xhat) + lpips(x.repeat(1, 3, 1,1), x_hat.repeat(1, 3, 1, 1)).mean()
+
+# %% 
+ae_model = AutoEncoder([4, 4, 4]).cuda()
+n_epochs = 50
+batch_size = 2048
+lr = 10e-4
+
+dataset = MNIST(".", train=True, transform=transforms.ToTensor(), download=True)
+data_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+
+optimizer = Adam(ae_model.parameters(), lr=lr)
+tqdm_epoch = trange(n_epochs)
+
+for epoch in tqdm_epoch:
+    avg_loss = 0.
+    num_items = 0
+    for x, y in data_loader:
+        x = x.to(device)
+        z = ae_model.encoder(x)
+        x_hat = ae_model.decoder(x)
+        loss = loss_fn_ae(x, x_hat)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        avg_loss += loss.item() * x.shape[0]
+        num_items += x.shape[0]
+    print('{} Average Loss: {:5f}'.format(epoch, avg_loss / num_items))
+    # Print the averaged training loss so far.
+    tqdm_epoch.set_description('Average Loss: {:5f}'.format(avg_loss / num_items))
+    # Update the checkpoint after each epoch of training.
+    torch.save(ae_model.state_dict(), 'ckpt_ae.pth')
+
+
+# %% create latent state dataset
+batch_size = 4096
+dataset = MNIST('.', train=True, transform=transforms.ToTensor(), download=True)
+data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4)
+ae_model.requires_grad_(False)
+ae_model.eval()
+
+zs = []
+ys = []
+
+for x,y in tqdm(data_loader):
+    z = ae_model.encoder(x.to(device)).cpu()
+    zs.append(z)
+    ys.append(y)
+
+zdata = torch.cat(zs)
+ydata = torch.cat(ys)
+
+# %%
+from torch.utils.data import TensorDataset
+
+latent_dataset = TensorDataset(zdata, ydata)
+
+# %%
+class La
